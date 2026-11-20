@@ -23,13 +23,28 @@ MAX_CATALOG_SIZE = 5000
 HARVEST_WORKERS = 16
 VALIDATION_WORKERS = 24
 
-MIN_WIDTH = 720
-MIN_HEIGHT = 720
+MIN_DIM = 640
+MIN_MAX_DIM = 720
 MIN_ASPECT = 0.45
-MAX_ASPECT = 1.15
+MAX_ASPECT = 1.90
+
+ALL_FORMAT_TAGS = ["квадрат 1:1", "вертикальное 9:16", "горизонтальное 16:9"]
+
+def detect_format_tag(aspect: float) -> str:
+    """Classifies photo aspect ratio into standard categories."""
+    if 0.85 <= aspect <= 1.18:
+        return "квадрат 1:1"
+    elif aspect < 0.85:
+        return "вертикальное 9:16"
+    else:
+        return "горизонтальное 16:9"
 
 # Expanded Russian nail-art dictionary
 TAG_DICTIONARY = {
+    # 0. Photo Aspect Format
+    "квадрат 1:1": ["1:1", "square", "квадратный", "коллаж", "квадрат 1:1"],
+    "вертикальное 9:16": ["9:16", "vertical", "portrait", "вертикальное", "вертикальное 9:16"],
+    "горизонтальное 16:9": ["16:9", "landscape", "wide", "widescreen", "палитра", "горизонтальное", "горизонтальное 16:9"],
     # 1. Style & Complexity
     "простой": ["minimal", "minimalist", "simple", "clean", "solid", "базовый", "простой", "plain", "однотонный"],
     "минимализм": ["minimal", "minimalist", "clean", "simple", "accent", "subtle", "dots", "stripe", "lines", "geometric", "swirl", "минимализм", "геометрия", "точки", "линии"],
@@ -357,7 +372,15 @@ AESTHETIC_SEARCH_QUERIES = [
     "site:i.pinimg.com/originals nail art manicure",
     "site:i.pinimg.com/originals ногти дизайн маникюр",
     "site:i.pinimg.com/originals френч миндаль",
-    "site:i.pinimg.com/originals нюд квадрат"
+    "site:i.pinimg.com/originals нюд квадрат",
+
+    # 1:1 and 16:9 multi-aspect sets & palettes
+    "nail art palette 16:9 widescreen",
+    "manicure nail palette wide photo",
+    "nail designs palette horizontal 16:9",
+    "nail art square collage 1:1",
+    "маникюр палитра цветов дизайн 16:9",
+    "коллаж дизайнов ногтей фото 1:1"
 ]
 
 def normalize_url(url: str) -> str:
@@ -606,7 +629,7 @@ def validate_pillow_candidate(candidate: dict) -> dict | None:
                 return None
 
             w, h = img.size
-            if w < MIN_WIDTH or h < MIN_HEIGHT:
+            if min(w, h) < MIN_DIM or max(w, h) < MIN_MAX_DIM:
                 return None
 
             aspect = w / float(h)
@@ -616,12 +639,18 @@ def validate_pillow_candidate(candidate: dict) -> dict | None:
             candidate["width"] = w
             candidate["height"] = h
 
-            # Automatic HSV Color Detection if no color tag is present
+            # Format Aspect Ratio Detection (1:1, 9:16, 16:9)
             tags = candidate.get("tags", [])
+            format_tag = detect_format_tag(aspect)
+            if not any(f in tags for f in ALL_FORMAT_TAGS):
+                tags.append(format_tag)
+
+            # Automatic HSV Color Detection if no color tag is present
             if not any(c in tags for c in ALL_COLOR_TAGS):
                 color = detect_hsv_color(img)
                 tags.append(color)
-                candidate["tags"] = tags
+
+            candidate["tags"] = sorted(list(set(tags)))
 
             return candidate
     except Exception:
@@ -652,8 +681,17 @@ def main():
                         norm = normalize_url(url)
                         if norm and norm not in seen_urls and not is_blacklisted(url):
                             seen_urls.add(norm)
+                            tags = item.get("tags", [])
+                            if not any(f in tags for f in ALL_FORMAT_TAGS):
+                                w = item.get("width")
+                                h = item.get("height")
+                                if w and h and h > 0:
+                                    tags.append(detect_format_tag(w / float(h)))
+                                else:
+                                    tags.append("вертикальное 9:16")
+                                item["tags"] = sorted(list(set(tags)))
                             existing_designs.append(item)
-                    print(f"[ACCUMULATION] Retained {len(existing_designs)} verified clean designs.")
+                    print(f"[ACCUMULATION] Retained {len(existing_designs)} verified clean designs with format tags.")
         except Exception as e:
             print(f"[WARN] Error reading {target_file}: {e}")
 
