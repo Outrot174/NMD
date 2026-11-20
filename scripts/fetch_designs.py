@@ -30,30 +30,45 @@ MAX_ASPECT = 1.15
 
 # Expanded Russian nail-art dictionary
 TAG_DICTIONARY = {
-    "френч": ["french", "white tip", "smile line", "френч", "микрофренч"],
+    # 1. Style & Complexity
+    "простой": ["minimal", "minimalist", "simple", "clean", "solid", "базовый", "простой", "plain", "однотонный"],
+    "минимализм": ["minimal", "minimalist", "clean", "simple", "accent", "subtle", "dots", "stripe", "lines", "geometric", "swirl", "минимализм", "геометрия", "точки", "линии"],
     "нюд": ["nude", "beige", "natural", "pink", "milky", "peach", "neutral", "pale", "rose", "blush", "sheer", "нюд", "молочный", "беж", "телесный"],
+    "френч": ["french", "white tip", "smile line", "френч", "микрофренч"],
+    "блестки": ["glitter", "gold", "silver", "sparkle", "foil", "diamond", "crystal", "gem", "shimmer", "metallic", "stars", "sequin", "holo", "хром", "втирка", "стразы", "блестки", "поталь", "глиттер", "шиммер", "золото", "серебро"],
+    "хром": ["chrome", "glazed", "hailey", "хром", "зеркальный"],
+    "втирка": ["rubbing", "glazed donut", "pearl dust", "втирка", "перламутр", "жемчужная втирка"],
+    "кошачий глаз": ["cat eye", "magnetic", "velvet effect", "кошачий глаз", "магнитный"],
+    "омбре": ["ombre", "gradient", "baby boomer", "fade", "aura", "омбре", "градиент", "бэби-бумер", "аура"],
+    "аура": ["aura", "aura nails", "аура", "световой круг"],
+    "матовый": ["matte", "velvet", "satin", "матовый", "бархат", "вельвет"],
+    "стразы": ["rhinestone", "rhinestones", "crystals", "charms", "3d nail", "стразы", "камни", "инкрустация"],
+    "сложный арт": ["floral", "art", "hand painted", "3d", "abstract", "drawing", "дизайн", "рисунок", "роспись", "сложный", "арт", "узор", "текстура", "мрамор", "цветы", "камни", "swirl"],
+    "мрамор": ["marble", "stone", "мрамор", "текстура камня"],
+    "цветы": ["flower", "floral", "botanical", "spring", "цветы", "сухоцветы", "растения", "флористика"],
+
+    # 2. Specific Holidays & Occasions
+    "новый год": ["christmas", "new year", "winter", "snowflake", "xmas", "holiday", "новый год", "новогодний", "зима", "снежинки", "елка"],
+    "14 февраля": ["valentine", "heart", "love", "romantic", "cupid", "14 февраля", "валентин", "сердце", "сердечки", "любовь", "романтика"],
+    "8 марта": ["spring", "floral", "pastel", "march", "8 марта", "весна", "тюльпаны", "мимоза", "весенний"],
+    "хэллоуин": ["halloween", "spooky", "autumn", "pumpkin", "ghost", "witch", "хэллоуин", "тыква", "осень", "паутинка"],
+    "свадебный": ["wedding", "bridal", "bride", "pearl", "lace", "свадебный", "невеста", "свадьба", "венчание"],
+    "вечерний": ["party", "festive", "evening", "prom", "club", "gala", "вечерний", "выпускной", "вечеринка", "корпоратив"],
+    "праздничный": ["festive", "holiday", "celebration", "glam", "праздничный", "новый год", "вечерний", "свадебный", "14 февраля", "8 марта", "хэллоуин"],
+
+    # 3. Nail Shape & Length
+    "миндаль": ["almond", "oval", "pointy", "миндаль", "овал", "миндалевидный"],
+    "квадрат": ["square", "squoval", "квадрат", "мягкий квадрат", "четкий квадрат"],
+    "овал": ["oval", "round", "овал", "круглые", "овальные"],
+    "стилет": ["stiletto", "coffin", "ballerina", "стилет", "балерина", "пика", "острые"],
+    "короткие": ["short", "short nails", "короткие", "короткие ногти", "натуральная длина"],
+
+    # Colors
     "бордо": ["burgundy", "wine", "maroon", "crimson", "scarlet", "ruby", "cherry", "бордо", "винный", "марсала", "вишня"],
     "красный": ["red", "red nails", "красный", "алый"],
     "розовый": ["pink", "barbie", "розовый", "пудровый", "малиновый"],
     "черный": ["black", "черный", "dark", "графит", "темный"],
-    "белый": ["white", "белый", "снежный", "pearl"],
-    "хром": ["chrome", "glazed", "hailey", "хром", "зеркальный"],
-    "втирка": ["rubbing", "glazed donut", "pearl dust", "втирка", "перламутр", "жемчужная втирка"],
-    "кошачий глаз": ["cat eye", "magnetic", "velvet effect", "кошачий глаз", "магнитный"],
-    "омбре": ["ombre", "gradient", "baby boomer", "fade", "омбре", "градиент", "бэби-бумер"],
-    "аура": ["aura", "aura nails", "аура", "световой круг"],
-    "блестки": ["glitter", "gold", "silver", "sparkle", "foil", "diamond", "crystal", "gem", "shimmer", "metallic", "stars", "sequin", "holo", "блестки", "поталь", "глиттер", "шиммер", "золото", "серебро"],
-    "стразы": ["rhinestone", "rhinestones", "crystals", "charms", "3d nail", "стразы", "камни", "инкрустация"],
-    "миндаль": ["almond", "oval", "pointy", "миндаль", "овал", "миндалевидный"],
-    "квадрат": ["square", "squoval", "coffin", "балерина", "квадрат", "мягкий квадрат"],
-    "стилет": ["stiletto", "стилет", "пика", "острые"],
-    "короткие": ["short", "short nails", "короткие", "короткие ногти"],
-    "минимализм": ["minimal", "minimalist", "clean", "simple", "accent", "subtle", "dots", "stripe", "lines", "geometric", "swirl", "минимализм", "геометрия", "точки", "линии"],
-    "матовый": ["matte", "velvet", "satin", "матовый", "бархат", "вельвет"],
-    "цветы": ["flower", "floral", "botanical", "spring", "цветы", "сухоцветы", "растения", "флористика"],
-    "мрамор": ["marble", "stone", "мрамор", "текстура камня"],
-    "праздничный": ["festive", "holiday", "christmas", "party", "new year", "celebration", "glam", "праздничный", "новогодний", "вечерний"],
-    "свадебный": ["wedding", "bridal", "bride", "свадебный", "невеста"]
+    "белый": ["white", "белый", "снежный", "pearl"]
 }
 
 # Blacklist of hardware, medical issues, salon processes, and non-manicure items
@@ -289,23 +304,43 @@ CURATED_SEEDS = [
 ]
 
 AESTHETIC_SEARCH_QUERIES = [
+    # Holidays & Occasions
+    "новогодний маникюр снежинки блестки",
+    "маникюр на новый год 2025 дизайн фото",
+    "маникюр 14 февраля сердечки дизайн",
+    "маникюр 8 марта цветы весенний дизайн",
+    "маникюр хэллоуин тыква дизайн ногтей",
+    "вечерний маникюр блестки сияние",
+    "свадебный маникюр нежный дизайн",
+
+    # Shapes & Length
+    "маникюр овал нежный дизайн фото",
+    "маникюр стилет арт длинные ногти",
+    "маникюр короткие ногти квадрат дизайн",
     "маникюр френч миндаль дизайн фото",
     "маникюр нюд квадрат минимализм фото",
+
+    # Styles & Complexities
+    "простой маникюр однотонный дизайн",
+    "сложный дизайн ногтей роспись арт фото",
     "маникюр бордо винный глянец фото",
     "маникюр кошачий глаз магнитный фото",
     "маникюр градиент омбре бэби бумер",
     "маникюр втирка жемчужная хром фото",
     "маникюр матовый бархат дизайн",
-    "свадебный маникюр нежный дизайн",
     "маникюр мраморный дизайн фото",
     "маникюр аура тренд дизайн ногтей",
-    "маникюр короткие ногти квадрат дизайн",
     "маникюр со стразами акцент фото",
     "маникюр цветы сухоцветы весна",
     "маникюр черный темный глянец дизайн",
     "маникюр розовый пудровый дизайн",
     "маникюр белый молочный дизайн фото",
-    "дизайн ногтей стилет арт фото",
+
+    # English aesthetic queries
+    "nail art christmas winter holiday",
+    "nail art valentine heart design",
+    "nail art halloween spooky nails",
+    "wedding bridal manicure nail art",
     "nail art almond french manicure",
     "nail art chrome glazed donut",
     "nail art velvet cat eye magnetic",
@@ -313,7 +348,6 @@ AESTHETIC_SEARCH_QUERIES = [
     "nail art nude minimalist square",
     "nail art burgundy red glazed",
     "nail art aura trend close up",
-    "wedding bridal manicure nail art",
     "aesthetic manicure nails close up",
     "site:i.pinimg.com/originals nail art manicure",
     "site:i.pinimg.com/originals ногти дизайн маникюр",
@@ -408,6 +442,16 @@ def synthesize_title_from_tags(tags: list[str], metadata_text: str) -> str:
     if "омбре" in tag_set:
         return "Градиентный дизайн омбре"
 
+    if "новый год" in tag_set:
+        return "Новогодний дизайн • Зимнее сияние"
+    if "14 февраля" in tag_set:
+        return "Романтичный дизайн с сердечками • 14 февраля"
+    if "8 марта" in tag_set:
+        return "Весенний дизайн с цветами • 8 марта"
+    if "хэллоуин" in tag_set:
+        return "Хэллоуин арт • Spooky Nails"
+    if "вечерний" in tag_set:
+        return "Вечерний сияющий дизайн • Праздничный"
     if "свадебный" in tag_set:
         return "Нежный свадебный нюд с сиянием"
 
