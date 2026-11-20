@@ -1,0 +1,109 @@
+[
+  {
+    "id": "nm_001",
+    "imageUrl": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1080&q=80",
+    "title": "Ультратонкий микрофренч на молочной базе",
+    "tags": [
+      "френч"
+    ],
+    "sourceAuthor": "Елена Морозова (Москва)",
+    "createdAt": "2026-02-10T10:00:00Z"
+  },
+  {
+    "id": "nm_002",
+    "imageUrl": "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1080&q=80",
+    "title": "Глубокий винный глянец с золотой поталью",
+    "tags": [
+      "блестки",
+      "праздничный"
+    ],
+    "sourceAuthor": "Camille Laurent (Paris)",
+    "createdAt": "2026-02-12T14:30:00Z"
+  },
+  {
+    "id": "nm_003",
+    "imageUrl": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1080&q=80",
+    "title": "Жемчужная хромированная втирка Glazed Donut",
+    "tags": [
+      "нюд"
+    ],
+    "sourceAuthor": "Анна Сидорова (СПб)",
+    "createdAt": "2026-02-14T09:15:00Z"
+  },
+  {
+    "id": "nm_004",
+    "imageUrl": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1080&q=80",
+    "title": "Хромированный серебряный металлик на длинный миндаль",
+    "tags": [
+      "миндаль"
+    ],
+    "sourceAuthor": "Soo-jin Park (Seoul)",
+    "createdAt": "2026-02-15T16:40:00Z"
+  },
+  {
+    "id": "nm_005",
+    "imageUrl": "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=1080&q=80",
+    "title": "Пудровый матовый нюд на мягкий квадрат",
+    "tags": [
+      "квадрат",
+      "матовый",
+      "нюд"
+    ],
+    "sourceAuthor": "Мария Ковалева (Минск)",
+    "createdAt": "2026-02-16T11:20:00Z"
+  },
+  {
+    "id": "nm_006",
+    "imageUrl": "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1080&q=80",
+    "title": "Изумрудный глубокий кошачий глаз с золотым бликом",
+    "tags": [
+      "кошачий глаз"
+    ],
+    "sourceAuthor": "Daria Vance (London)",
+    "createdAt": "2026-02-17T13:00:00Z"
+  },
+  {
+    "id": "nm_007",
+    "imageUrl": "https://images.unsplash.com/photo-1583001809873-a128495da465?auto=format&fit=crop&w=1080&q=80",
+    "title": "Геометрический минимализм с тонкими черными линиями",
+    "tags": [
+      "минимализм"
+    ],
+    "sourceAuthor": "Ольга Васильева (Екатеринбург)",
+    "createdAt": "2026-02-18T18:10:00Z"
+  },
+  {
+    "id": "nm_008",
+    "imageUrl": "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1080&q=80",
+    "title": "Нежный лавандово-молочный градиент омбре",
+    "tags": [
+      "нюд",
+      "омбре"
+    ],
+    "sourceAuthor": "Giulia Rossi (Milano)",
+    "createdAt": "2026-02-19T08:45:00Z"
+  },
+  {
+    "id": "nm_009",
+    "imageUrl": "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=1080&q=80",
+    "title": "Матовый графит с россыпью звездного шиммера",
+    "tags": [
+      "блестки",
+      "матовый"
+    ],
+    "sourceAuthor": "Ксения Чернышова (Алматы)",
+    "createdAt": "2026-02-19T19:30:00Z"
+  },
+  {
+    "id": "nm_010",
+    "imageUrl": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1080&q=80",
+    "title": "Классический молочный френч с акцентом из кристаллов",
+    "tags": [
+      "минимализм",
+      "нюд",
+      "френч"
+    ],
+    "sourceAuthor": "Chloe Dubois (Lyon)",
+    "createdAt": "2026-02-20T12:00:00Z"
+  }
+]

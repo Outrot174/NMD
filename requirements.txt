@@ -1,0 +1,4 @@
+# NMD Pipeline Dependencies
+# scripts/fetch_designs.py runs cleanly on standard library (Python 3.8+)
+# Optional libraries for custom scrapers:
+# requests>=2.31.0
