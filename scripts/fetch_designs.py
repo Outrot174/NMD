@@ -1,30 +1,38 @@
 #!/usr/bin/env python3
 """
-NMD (NailsMaster Designs) — Standalone Content Pipeline & Scraper
-Aggregates high-resolution finished manicure & nail art close-ups (CIS & International masters),
-filters out equipment/process photos via negative keyword blacklist, extracts real metadata,
+NMD (NailsMaster Designs) — Massive Catalog Scaler & Incremental Harvesting Pipeline
+Aggregates high-resolution finished manicure & nail art photos from public endpoints,
+filters out equipment/process photos via negative keyword blacklist, extracts metadata,
 deterministically maps English keywords to Russian tags, synthesizes accurate Russian titles,
-validates HTTP 200 / Content-Type / Content-Length, deduplicates entries, and outputs designs.json.
+validates HTTP 200 in parallel with ThreadPoolExecutor, and incrementally accumulates designs
+in designs.json (capped at 2,500 entries).
 """
 
 import json
 import os
 import sys
 import re
+import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 1. Deterministic mapping dictionary: English source keywords/alt-text -> Russian tags
+MAX_CATALOG_SIZE = 2500
+VALIDATION_WORKERS = 25
+HARVEST_WORKERS = 12
+
+# 1. Deterministic mapping dictionary: English source keywords -> Russian tags
 TAG_DICTIONARY = {
     "френч": ["french", "white tip", "smile line"],
-    "нюд": ["nude", "beige", "natural", "pink", "milky", "peach", "neutral", "pale"],
-    "бордо": ["red", "burgundy", "wine", "maroon"],
-    "блестки": ["glitter", "gold", "silver", "sparkle", "foil", "rhinestone", "diamond", "crystal", "gem", "shimmer"],
-    "праздничный": ["festive", "holiday", "christmas", "party", "new year"],
-    "миндаль": ["almond", "oval"],
+    "нюд": ["nude", "beige", "natural", "pink", "milky", "peach", "neutral", "pale", "rose", "blush"],
+    "бордо": ["red", "burgundy", "wine", "maroon", "crimson", "scarlet"],
+    "блестки": ["glitter", "gold", "silver", "sparkle", "foil", "rhinestone", "diamond", "crystal", "gem", "shimmer", "metallic", "chrome", "stars", "sequin"],
+    "праздничный": ["festive", "holiday", "christmas", "party", "new year", "celebration", "wedding"],
+    "миндаль": ["almond", "oval", "pointy", "stiletto"],
     "квадрат": ["square", "squoval"],
-    "минимализм": ["minimal", "minimalist", "clean", "simple", "accent", "subtle"],
+    "минимализм": ["minimal", "minimalist", "clean", "simple", "accent", "subtle", "dots", "stripe", "lines", "geometric"],
     "матовый": ["matte", "velvet"],
     "омбре": ["ombre", "gradient", "baby boomer", "fade"],
     "кошачий глаз": ["cat eye", "magnetic"]
@@ -36,14 +44,107 @@ PROCESS_BLACKLIST = [
     "file", "salon interior", "salon", "pedicure", "spa", "bottles", "drying",
     "cream", "procedure", "chair", "hair", "forest", "dentist", "feet", "foot",
     "toes", "trauma", "bleeding", "fungus", "infection", "vintage", "antique",
-    "ex-servicewomen", "drawing", "sketch", "painting", "lobby card", "film"
+    "ex-servicewomen", "drawing", "sketch", "painting", "lobby card", "film",
+    "beetle", "repsimus", "insect", "gazette", "theatre", "program", "book",
+    "newspaper", "fortepan", "pinhead", "hammer", "screw", "microscope", "billiard",
+    "tombstone", "statue", "grave", "cemetery", "church", "cathedral", "coin",
+    "archaeology", "manuscript", "document", "illustration", "diagram"
 ]
 
+HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Linux; Android 16; POCO F7 Ultra) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
+}
+
+WIKIMEDIA_SEARCH_QUERIES = [
+    ("nail art", [0, 50, 100, 150, 200, 250, 300, 350, 400]),
+    ("manicure", [0, 50, 100, 150, 200, 250, 300]),
+    ("manicure design", [0, 50, 100, 150, 200]),
+    ("french manicure", [0, 50, 100, 150, 200]),
+    ("gel nails", [0, 50, 100, 150, 200, 250, 300]),
+    ("glitter nails", [0, 50, 100, 150, 200]),
+    ("acrylic nails", [0, 50, 100, 150, 200, 250, 300]),
+    ("fingernails with nail polish", [0, 50, 100, 150, 200]),
+    ("almond nails", [0, 50, 100, 150]),
+    ("square nails", [0, 50, 100, 150]),
+    ("ombre nails", [0, 50, 100, 150]),
+    ("red manicure", [0, 50, 100, 150]),
+    ("holiday nails", [0, 50, 100, 150]),
+    ("pink manicure", [0, 50, 100, 150]),
+    ("dark manicure", [0, 50, 100, 150]),
+    ("pastel nails", [0, 50, 100, 150]),
+    ("velvet nails", [0, 50, 100]),
+    ("cat eye nail art", [0, 50, 100]),
+    ("matte nails", [0, 50, 100]),
+    ("painted fingernails", [0, 50, 100, 150]),
+    ("nail extensions", [0, 50, 100, 150]),
+    ("nail polish manicure", [0, 50, 100, 150, 200])
+]
+
+# Curated seed designs (Unsplash & high-res verified)
+SEED_DESIGNS = [
+    {
+        "id": "nm_0001",
+        "imageUrl": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1080&q=80",
+        "title": "Янтарный черепаховый арт • Квадрат",
+        "tags": ["квадрат", "минимализм", "нюд"],
+        "sourceAuthor": "Елена Морозова (Москва)",
+        "createdAt": "2026-02-10T10:00:00Z"
+    },
+    {
+        "id": "nm_0002",
+        "imageUrl": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1080&q=80",
+        "title": "Алый глянец • Миндаль • Праздничный",
+        "tags": ["бордо", "миндаль", "праздничный"],
+        "sourceAuthor": "Camille Laurent (Paris)",
+        "createdAt": "2026-02-12T14:30:00Z"
+    },
+    {
+        "id": "nm_0003",
+        "imageUrl": "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1080&q=80",
+        "title": "Лавандовый квадрат с серебряным шиммером",
+        "tags": ["блестки", "квадрат", "минимализм", "праздничный"],
+        "sourceAuthor": "Анна Сидорова (СПб)",
+        "createdAt": "2026-02-14T09:15:00Z"
+    },
+    {
+        "id": "nm_0004",
+        "imageUrl": "https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?auto=format&fit=crop&w=1080&q=80",
+        "title": "Абстрактный арт с золотой поталью • Миндаль",
+        "tags": ["блестки", "миндаль", "праздничный"],
+        "sourceAuthor": "Soo-jin Park (Seoul)",
+        "createdAt": "2026-02-15T16:40:00Z"
+    },
+    {
+        "id": "nm_0005",
+        "imageUrl": "https://images.unsplash.com/photo-1597999709389-e29dc41e218a?auto=format&fit=crop&w=1080&q=80",
+        "title": "Пудрово-сиреневый шиммер с жемчугом • Квадрат",
+        "tags": ["блестки", "квадрат", "минимализм", "нюд"],
+        "sourceAuthor": "Мария Ковалева (Минск)",
+        "createdAt": "2026-02-16T11:20:00Z"
+    },
+    {
+        "id": "nm_0006",
+        "imageUrl": "https://images.unsplash.com/photo-1688583417757-9060cba25399?auto=format&fit=crop&w=1080&q=80",
+        "title": "Пастельный градиент омбре • Нюд • Миндаль",
+        "tags": ["миндаль", "минимализм", "нюд", "омбре"],
+        "sourceAuthor": "Daria Vance (London)",
+        "createdAt": "2026-02-17T13:00:00Z"
+    }
+]
+
+def normalize_url(url: str) -> str:
+    """Normalizes image URL for robust deduplication."""
+    u = url.split("?")[0].strip().lower()
+    # For Wikimedia thumbnails, extract base filename
+    if "/wikipedia/commons/thumb/" in u:
+        parts = u.split("/")
+        if len(parts) >= 9:
+            return parts[8]
+    return u
+
 def is_process_photo(text: str) -> tuple[bool, str]:
-    """
-    Checks if source metadata contains any process, equipment, or non-manicure terms.
-    Returns (True, matching_term) if blacklisted.
-    """
+    """Checks if text contains process, tool or equipment terms."""
     text_lower = text.lower()
     for term in PROCESS_BLACKLIST:
         pattern = r'\b' + re.escape(term) + r'\b'
@@ -52,10 +153,7 @@ def is_process_photo(text: str) -> tuple[bool, str]:
     return False, ""
 
 def extract_tags_from_metadata(metadata_text: str) -> list[str]:
-    """
-    Deterministically maps English metadata text to Russian tags.
-    If fewer than 2 relevant tags match, assigns safe neutral fallback tags (["маникюр", "дизайн"]).
-    """
+    """Deterministically maps English metadata to Russian tags."""
     text_lower = metadata_text.lower()
     matched_tags = set()
 
@@ -66,239 +164,247 @@ def extract_tags_from_metadata(metadata_text: str) -> list[str]:
                 matched_tags.add(ru_tag)
                 break
 
-    if len(matched_tags) < 2:
+    if not matched_tags:
         return ["маникюр", "дизайн"]
+    elif len(matched_tags) == 1:
+        return sorted(list(matched_tags) + ["дизайн"])
 
     return sorted(list(matched_tags))
 
 def synthesize_title_from_tags(tags: list[str], metadata_text: str) -> str:
-    """
-    Synthesizes a clean, accurate Russian title directly from matched tags and subject.
-    Never uses unrelated hardcoded templates.
-    """
+    """Synthesizes a clean Russian title directly from matched tags and subject."""
     if tags == ["маникюр", "дизайн"]:
         return "Минималистичный дизайн маникюра"
 
     tag_set = set(tags)
     text_lower = metadata_text.lower()
 
-    # Specific stylistic title synthesis directly matching actual visual content
     if "tortoiseshell" in text_lower or "черепаховый" in text_lower:
         return "Янтарный черепаховый арт • Квадрат"
+    if "кошачий глаз" in tag_set:
+        return "Магнитный кошачий глаз • Мерцание"
+    if "френч" in tag_set and "омбре" in tag_set:
+        return "Французский бэби-бумер • Омбре"
+    if "френч" in tag_set and "блестки" in tag_set:
+        return "Классический френч с акцентным блеском"
+    if "френч" in tag_set and "миндаль" in tag_set:
+        return "Классический френч • Миндаль"
+    if "френч" in tag_set and "квадрат" in tag_set:
+        return "Классический френч • Квадрат"
+    if "френч" in tag_set:
+        return "Французский маникюр • Дизайн"
     if "бордо" in tag_set and "миндаль" in tag_set:
         return "Алый глянец • Миндаль • Праздничный"
     if "бордо" in tag_set and "квадрат" in tag_set:
         return "Винный глянец • Квадрат"
-    if "lavender" in text_lower and "silver" in text_lower:
-        return "Лавандовый квадрат с серебряным шиммером"
-    if "swirl" in text_lower and "abstract" in text_lower:
-        return "Абстрактный арт с золотой поталью • Миндаль"
-    if "pearl" in text_lower and "shimmer" in text_lower:
-        return "Пудрово-сиреневый шиммер с жемчугом • Квадрат"
-    if "jelly" in text_lower or ("омбре" in tag_set and "нюд" in tag_set and "миндаль" in tag_set):
-        return "Пастельный градиент омбре • Нюд • Миндаль"
-    if "френч" in tag_set and "блестки" in tag_set and "ring finger" in text_lower:
-        return "Классический френч с акцентным блеском • Квадрат"
-    if "френч" in tag_set and "омбре" in tag_set:
-        return "Французский бэби-бумер • Омбре • Стразы"
-    if "френч" in tag_set and "квадрат" in tag_set:
-        return "Классический френч • Квадрат"
-    if "френч" in tag_set and "миндаль" in tag_set:
-        return "Классический френч • Миндаль"
-    if "кошачий глаз" in tag_set:
-        return "Магнитный кошачий глаз • Мерцающие звезды"
-    if "crystal" in text_lower and "acrylic" in text_lower:
-        return "Лавандовый глянец с кристаллом • Квадрат"
-    if "polka" in text_lower or ("матовый" in tag_set and "миндаль" in tag_set):
-        return "Матовый графит с контрастным горошком • Миндаль"
+    if "бордо" in tag_set:
+        return "Глубокий винный глянец • Дизайн"
+    if "матовый" in tag_set and "миндаль" in tag_set:
+        return "Матовый графит • Миндаль"
     if "матовый" in tag_set and "квадрат" in tag_set:
         return "Матовый бархат • Квадрат"
-    if "peach" in text_lower or "orange" in text_lower:
-        return "Персиковые волны с золотым блеском • Миндаль"
-    if "нюд" in tag_set and "блестки" in tag_set:
-        return "Нежный нюд с шиммером и блестками"
+    if "матовый" in tag_set:
+        return "Матовый бархатный финиш"
+    if "омбре" in tag_set and "нюд" in tag_set:
+        return "Пастельный градиент омбре • Нюд"
+    if "омбре" in tag_set:
+        return "Градиентный дизайн омбре"
     if "праздничный" in tag_set and "блестки" in tag_set:
         return "Праздничный дизайн с блестками"
+    if "блестки" in tag_set and "миндаль" in tag_set:
+        return "Мерцающий дизайн • Миндаль"
+    if "блестки" in tag_set and "квадрат" in tag_set:
+        return "Сияющий глиттер • Квадрат"
+    if "блестки" in tag_set:
+        return "Дизайн с акцентным блеском"
+    if "нюд" in tag_set and "минимализм" in tag_set:
+        return "Нюдовый минимализм"
+    if "нюд" in tag_set and "квадрат" in tag_set:
+        return "Нежный нюд • Квадрат"
+    if "нюд" in tag_set and "миндаль" in tag_set:
+        return "Пудровый нюд • Миндаль"
+    if "нюд" in tag_set:
+        return "Нежный нюдовый дизайн"
+    if "минимализм" in tag_set and "квадрат" in tag_set:
+        return "Геометрический минимализм • Квадрат"
+    if "минимализм" in tag_set and "миндаль" in tag_set:
+        return "Лаконичный минимализм • Миндаль"
+    if "минимализм" in tag_set:
+        return "Минималистичный дизайн"
+    if "миндаль" in tag_set:
+        return "Элегантный миндаль • Дизайн"
+    if "квадрат" in tag_set:
+        return "Четкий квадрат • Дизайн"
 
-    # Default synthesizer: capitalize and join top tags
-    capitalized_tags = [t.capitalize() for t in tags[:3]]
-    return " • ".join(capitalized_tags)
+    capitalized = [t.capitalize() for t in tags[:2]]
+    return " • ".join(capitalized)
 
-# Curated candidate pool with authentic source metadata from verified finished nail art close-ups
-CANDIDATE_CATALOG = [
-    {
-        "id": "nm_001",
-        "imageUrl": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Hands with black and tortoiseshell amber manicure on natural short square nails, minimalist accent design",
-        "sourceAuthor": "Елена Морозова (Москва)",
-        "createdAt": "2026-02-10T10:00:00Z"
-    },
-    {
-        "id": "nm_002",
-        "imageUrl": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Close up of red classic manicure on elegant almond nails with delicate love heart design, festive holiday party look",
-        "sourceAuthor": "Camille Laurent (Paris)",
-        "createdAt": "2026-02-12T14:30:00Z"
-    },
-    {
-        "id": "nm_003",
-        "imageUrl": "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Soft pastel lavender square nails with clean white accents and silver glitter sparkle shimmer, festive party",
-        "sourceAuthor": "Анна Сидорова (СПб)",
-        "createdAt": "2026-02-14T09:15:00Z"
-    },
-    {
-        "id": "nm_004",
-        "imageUrl": "https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Woman hands with colorful abstract nail art swirls, yellow navy orange and gold foil sparkle on almond nails, festive",
-        "sourceAuthor": "Soo-jin Park (Seoul)",
-        "createdAt": "2026-02-15T16:40:00Z"
-    },
-    {
-        "id": "nm_005",
-        "imageUrl": "https://images.unsplash.com/photo-1597999709389-e29dc41e218a?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Folded hands with soft lilac shimmer polish and delicate pearl rhinestone beads on soft square nails, nude minimalist clean",
-        "sourceAuthor": "Мария Ковалева (Минск)",
-        "createdAt": "2026-02-16T11:20:00Z"
-    },
-    {
-        "id": "nm_006",
-        "imageUrl": "https://images.unsplash.com/photo-1688583417757-9060cba25399?auto=format&fit=crop&w=1080&q=80",
-        "sourceMetadata": "Minimalist pastel jelly nude gradient manicure, milky translucent pink pale lemon and lilac ombre on almond nails",
-        "sourceAuthor": "Daria Vance (London)",
-        "createdAt": "2026-02-17T13:00:00Z"
-    },
-    {
-        "id": "nm_007",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/French_Manicure_with_Glitter_nail_art_on_ring_finger.jpg/960px-French_Manicure_with_Glitter_nail_art_on_ring_finger.jpg",
-        "sourceMetadata": "French Manicure with Glitter nail art on ring finger, classic white smile line on natural nude base, square nails",
-        "sourceAuthor": "Ольга Васильева (Екатеринбург)",
-        "createdAt": "2026-02-18T18:10:00Z"
-    },
-    {
-        "id": "nm_008",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Blue_cat_eye_nail_art.jpg/960px-Blue_cat_eye_nail_art.jpg",
-        "sourceMetadata": "Short square cat eye nail art with blue purple magnetic effect and silver sparkle stars, festive party",
-        "sourceAuthor": "Giulia Rossi (Milano)",
-        "createdAt": "2026-02-19T08:45:00Z"
-    },
-    {
-        "id": "nm_009",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Acrylic_nail_art_with_crystal.jpg/960px-Acrylic_nail_art_with_crystal.jpg",
-        "sourceMetadata": "Manicure for acrylic nails with lavender polish and clean minimalist design using crystal rhinestone, square nude accent",
-        "sourceAuthor": "Ксения Чернышова (Алматы)",
-        "createdAt": "2026-02-19T19:30:00Z"
-    },
-    {
-        "id": "nm_010",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Matte_black_and_white_polkadot_nails_%2816476158115%29.jpg/960px-Matte_black_and_white_polkadot_nails_%2816476158115%29.jpg",
-        "sourceMetadata": "Black acrylic nails with Opi matte top coat and crisp white polka dots, almond shape, minimalist graphic",
-        "sourceAuthor": "Chloe Dubois (Lyon)",
-        "createdAt": "2026-02-20T12:00:00Z"
-    },
-    {
-        "id": "nm_011",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Nail_extensions_with_nail_art.jpg/960px-Nail_extensions_with_nail_art.jpg",
-        "sourceMetadata": "Nail extensions with french manicure baby boomer pink white ombre, black graphic stripes and crystal gem on square nails",
-        "sourceAuthor": "Amina Al-Mansoor (Dubai)",
-        "createdAt": "2026-02-20T15:30:00Z"
-    },
-    {
-        "id": "nm_012",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Gel_Nails_Pink_Orange_and_White_Design.jpg/960px-Gel_Nails_Pink_Orange_and_White_Design.jpg",
-        "sourceMetadata": "Gel nails with pink and orange peach swirl design with gold glitter lines and small crystal rhinestones on almond oval nails, festive party",
-        "sourceAuthor": "Татьяна Белова (Новосибирск)",
-        "createdAt": "2026-02-20T18:00:00Z"
-    }
-]
+def fetch_search_page(query: str, offset: int) -> list[dict]:
+    """Queries Wikimedia Commons API for a specific query and offset."""
+    url = f"https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch={urllib.parse.quote(query)}&gsrnamespace=6&gsrlimit=50&gsroffset={offset}&prop=imageinfo&iiprop=url|extmetadata|mime|dimensions&iiurlwidth=960"
+    req = urllib.request.Request(url, headers={"User-Agent": "NailsMasterApp/2.4 (https://github.com/Outrot174/NMA; contact@outrot.com)"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            pages = data.get("query", {}).get("pages", {})
+            return list(pages.values())
+    except Exception:
+        return []
 
-def validate_image_url(url: str, timeout: int = 10) -> bool:
+def validate_image_candidate(candidate: dict) -> dict | None:
     """
-    Validates URL returns HTTP 200, is accessible, and serves a non-empty image.
-    Uses standard browser User-Agent to avoid Wikimedia/CDN blocks.
+    Validates candidate image URL returns HTTP 200/206 with valid image content.
+    Reads initial chunk to confirm accessibility.
     """
+    url = candidate.get("imageUrl", "")
     headers = {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 16; POCO F7 Ultra) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+        "User-Agent": HTTP_HEADERS["User-Agent"],
         "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
     }
     try:
         req = urllib.request.Request(url, headers=headers, method="GET")
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            if response.status != 200:
-                print(f"  [REJECT] HTTP {response.status}", file=sys.stderr)
-                return False
+        with urllib.request.urlopen(req, timeout=8) as response:
+            if response.status not in (200, 206):
+                return None
             content_type = response.headers.get("Content-Type", "").lower()
-            content_length = response.headers.get("Content-Length")
-            if content_length is not None and int(content_length) <= 0:
-                print(f"  [REJECT] Empty body (Content-Length: {content_length})", file=sys.stderr)
-                return False
             if content_type and not (content_type.startswith("image/") or "octet-stream" in content_type):
-                print(f"  [REJECT] Invalid Content-Type: {content_type}", file=sys.stderr)
-                return False
-            return True
-    except Exception as e:
-        print(f"  [REJECT] Connection error: {e}", file=sys.stderr)
-        return False
+                return None
+            chunk = response.read(512)
+            if not chunk or len(chunk) < 10:
+                return None
+            return candidate
+    except Exception:
+        return None
 
-def main():
-    print("=== NMD Content Repository Aggregator & Tag Alignment Validator ===")
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    target_file = os.path.join(root_dir, "designs.json")
-
-    validated_designs = []
+def load_existing_catalog(file_path: str) -> tuple[list[dict], set[str], set[str]]:
+    """Loads existing designs from designs.json to ensure incremental accumulation."""
+    existing_list = []
     seen_urls = set()
     seen_ids = set()
 
-    for item in CANDIDATE_CATALOG:
-        item_id = item.get("id", "").strip()
-        url = item.get("imageUrl", "").strip()
-        author = item.get("sourceAuthor", "Unknown Master").strip()
-        created_at = item.get("createdAt", datetime.now(timezone.utc).isoformat())
-        raw_meta = item.get("sourceMetadata", "").strip()
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    for item in data:
+                        url = item.get("imageUrl", "").strip()
+                        item_id = item.get("id", "").strip()
+                        norm = normalize_url(url)
+                        if norm and norm not in seen_urls:
+                            seen_urls.add(norm)
+                            seen_ids.add(item_id)
+                            existing_list.append(item)
+            print(f"[ACCUMULATION] Loaded {len(existing_list)} existing designs from {file_path}")
+        except Exception as e:
+            print(f"[WARN] Failed to read existing {file_path}: {e}")
 
-        # Deduplication check
-        norm_url = url.split("?")[0].lower()
-        if not item_id or item_id in seen_ids or norm_url in seen_urls:
-            print(f"[SKIP] Duplicate entry: {item_id}")
-            continue
+    # Ensure seed designs are included
+    for seed in SEED_DESIGNS:
+        norm = normalize_url(seed["imageUrl"])
+        if norm not in seen_urls:
+            seen_urls.add(norm)
+            seen_ids.add(seed["id"])
+            existing_list.append(seed)
 
-        # 1. Negative keyword / process photo filter
-        is_bad, bad_term = is_process_photo(raw_meta)
-        if is_bad:
-            print(f"[DISCARD] {item_id} contains process/equipment keyword: '{bad_term}'")
-            continue
+    return existing_list, seen_urls, seen_ids
 
-        # 2. Strict metadata-driven tagging (deterministic dictionary)
-        tags = extract_tags_from_metadata(raw_meta)
+def main():
+    print("=== NMD Massive Catalog Scaling & Incremental Harvesting Pipeline ===")
+    t_start = time.time()
 
-        # 3. Dynamic title synthesis from matched tags
-        title = synthesize_title_from_tags(tags, raw_meta)
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    target_file = os.path.join(root_dir, "designs.json")
 
-        print(f"Validating [{item_id}] \"{title}\"...")
-        print(f"  Source metadata: \"{raw_meta}\"")
-        print(f"  Extracted tags: {tags}")
+    # 1. Incremental persistence: Load existing valid designs
+    accumulated_designs, seen_urls, seen_ids = load_existing_catalog(target_file)
+    initial_count = len(accumulated_designs)
 
-        if validate_image_url(url):
-            validated_designs.append({
-                "id": item_id,
-                "imageUrl": url,
-                "title": title,
-                "tags": tags,
-                "sourceAuthor": author,
-                "createdAt": created_at
-            })
-            seen_ids.add(item_id)
-            seen_urls.add(norm_url)
-            print(f"  -> VALID [HTTP 200, {len(tags)} tags]")
-        else:
-            print(f"  -> REJECTED by URL validator")
+    # 2. Multi-threaded harvesting from Wikimedia Commons
+    print(f"\n[PHASE 1] Harvesting candidates across {len(WIKIMEDIA_SEARCH_QUERIES)} query groups ({HARVEST_WORKERS} workers)...")
+    harvest_tasks = []
+    for query, offsets in WIKIMEDIA_SEARCH_QUERIES:
+        for offset in offsets:
+            harvest_tasks.append((query, offset))
 
-    print(f"\nSuccessfully validated {len(validated_designs)} designs.")
+    raw_candidates = []
+    with ThreadPoolExecutor(max_workers=HARVEST_WORKERS) as executor:
+        futures = {executor.submit(fetch_search_page, q, off): (q, off) for q, off in harvest_tasks}
+        for future in as_completed(futures):
+            pages = future.result()
+            for p in pages:
+                title = p.get("title", "").replace("File:", "").strip()
+                ii = p.get("imageinfo", [{}])[0]
+                mime = ii.get("mime", "")
+                if not (mime.startswith("image/jpeg") or mime.startswith("image/png") or mime.startswith("image/webp")):
+                    continue
+                thumb = ii.get("thumburl", "")
+                if not thumb:
+                    continue
 
+                norm_thumb = normalize_url(thumb)
+                if norm_thumb in seen_urls:
+                    continue
+
+                desc = ii.get("extmetadata", {}).get("ImageDescription", {}).get("value", "")
+                combined_meta = f"{title} {desc}"
+
+                # Negative keyword filter
+                is_bad, _ = is_process_photo(combined_meta)
+                if is_bad:
+                    continue
+
+                tags = extract_tags_from_metadata(combined_meta)
+                ru_title = synthesize_title_from_tags(tags, combined_meta)
+
+                seen_urls.add(norm_thumb)
+                raw_candidates.append({
+                    "title": ru_title,
+                    "imageUrl": thumb,
+                    "tags": tags,
+                    "sourceAuthor": "NailsMaster Community",
+                    "createdAt": datetime.now(timezone.utc).isoformat()
+                })
+
+    print(f"[HARVEST] Discovered {len(raw_candidates)} new candidate images passing blacklist.")
+
+    # 3. Concurrent URL validation with ThreadPoolExecutor
+    print(f"\n[PHASE 2] Validating image URLs in parallel ({VALIDATION_WORKERS} workers)...")
+    validated_new_designs = []
+    next_id_num = initial_count + 1
+
+    with ThreadPoolExecutor(max_workers=VALIDATION_WORKERS) as executor:
+        futures = {executor.submit(validate_image_candidate, c): c for c in raw_candidates}
+        for future in as_completed(futures):
+            res = future.result()
+            if res:
+                item_id = f"nm_{next_id_num:04d}"
+                res["id"] = item_id
+                next_id_num += 1
+                validated_new_designs.append(res)
+                if (len(validated_new_designs) % 100 == 0):
+                    print(f"  ... validated {len(validated_new_designs)} new items")
+
+    print(f"[VALIDATION] Successfully validated {len(validated_new_designs)} new designs.")
+
+    # 4. Incremental merge & cap at MAX_CATALOG_SIZE
+    accumulated_designs.extend(validated_new_designs)
+    if len(accumulated_designs) > MAX_CATALOG_SIZE:
+        print(f"[CAP] Capping catalog at {MAX_CATALOG_SIZE} freshest entries (was {len(accumulated_designs)})")
+        accumulated_designs = accumulated_designs[:MAX_CATALOG_SIZE]
+
+    # Re-index IDs cleanly nm_0001 .. nm_XXXX
+    for idx, item in enumerate(accumulated_designs, start=1):
+        item["id"] = f"nm_{idx:04d}"
+
+    print(f"\n[PHASE 3] Writing {len(accumulated_designs)} designs to {target_file}...")
     with open(target_file, "w", encoding="utf-8") as f:
-        json.dump(validated_designs, f, ensure_ascii=False, indent=2)
+        json.dump(accumulated_designs, f, ensure_ascii=False, indent=2)
 
-    print(f"Written clean designs to: {target_file}")
+    elapsed = time.time() - t_start
+    print(f"\n=== FINISHED in {elapsed:.1f}s ===")
+    print(f"Catalog expanded from {initial_count} to {len(accumulated_designs)} designs.")
+    print(f"File size: {os.path.getsize(target_file) / 1024:.1f} KB")
 
 if __name__ == "__main__":
     main()
