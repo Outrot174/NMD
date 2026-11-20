@@ -64,11 +64,16 @@ TAG_DICTIONARY = {
     "короткие": ["short", "short nails", "короткие", "короткие ногти", "натуральная длина"],
 
     # Colors
-    "бордо": ["burgundy", "wine", "maroon", "crimson", "scarlet", "ruby", "cherry", "бордо", "винный", "марсала", "вишня"],
-    "красный": ["red", "red nails", "красный", "алый"],
-    "розовый": ["pink", "barbie", "розовый", "пудровый", "малиновый"],
-    "черный": ["black", "черный", "dark", "графит", "темный"],
-    "белый": ["white", "белый", "снежный", "pearl"]
+    "нюд": ["nude", "beige", "natural", "neutral", "milky", "peach", "pale", "нюд", "молочный", "беж", "телесный", "песочный"],
+    "розовый": ["pink", "barbie", "blush", "bubblegum", "rose", "розовый", "пудровый", "малиновый"],
+    "красный": ["red", "red nails", "crimson", "scarlet", "ruby", "красный", "алый"],
+    "бордо": ["burgundy", "wine", "maroon", "cherry", "бордо", "винный", "марсала", "вишня"],
+    "белый": ["white", "snow", "pearl", "белый", "снежный"],
+    "черный": ["black", "dark", "charcoal", "onyx", "черный", "угольный", "темный"],
+    "синий": ["blue", "navy", "cobalt", "sapphire", "indigo", "sky", "синий", "голубой"],
+    "зеленый": ["green", "emerald", "sage", "mint", "olive", "зеленый", "изумруд", "мята"],
+    "фиолетовый": ["purple", "violet", "lavender", "lilac", "plum", "фиолетовый", "сиреневый", "лаванда"],
+    "золото/серебро": ["gold", "silver", "chrome", "metallic", "glitter", "sparkle", "shimmer", "foil", "золото", "серебро", "хром", "блестки"]
 }
 
 # Blacklist of hardware, medical issues, salon processes, and non-manicure items
@@ -515,6 +520,66 @@ def harvest_yandex_queries(query: str, page: int = 0) -> list[str]:
     except Exception:
         return []
 
+ALL_COLOR_TAGS = [
+    "нюд", "розовый", "красный", "бордо", "белый",
+    "черный", "синий", "зеленый", "фиолетовый", "золото/серебро"
+]
+
+def detect_hsv_color(img: Image.Image) -> str:
+    """Center-crop HSV dominant hue/saturation/value analysis on a manicure photo."""
+    w, h = img.size
+    left = int(w * 0.20)
+    top = int(h * 0.20)
+    right = int(w * 0.80)
+    bottom = int(h * 0.80)
+    crop = img.crop((left, top, right, bottom)).convert("RGB").resize((45, 45), Image.Resampling.BILINEAR)
+    hsv_crop = crop.convert("HSV")
+    votes = {c: 0.0 for c in ALL_COLOR_TAGS}
+
+    for pixel in hsv_crop.getdata():
+        h_val, s_val, v_val = pixel[0], pixel[1], pixel[2]
+        h_deg = h_val * 360.0 / 255.0
+        s_norm = s_val / 255.0
+        v_norm = v_val / 255.0
+
+        if v_norm < 0.22:
+            votes["черный"] += 1.8
+        elif v_norm > 0.82 and s_norm < 0.16:
+            votes["белый"] += 1.5
+        elif s_norm < 0.25:
+            if 10 <= h_deg <= 48 and v_norm > 0.40:
+                votes["нюд"] += 1.4
+            elif v_norm > 0.70:
+                votes["белый"] += 1.0
+            else:
+                votes["золото/серебро"] += 0.8
+        elif h_deg >= 345 or h_deg < 15:
+            if v_norm < 0.45 or (s_norm > 0.65 and v_norm < 0.55):
+                votes["бордо"] += 1.7
+            else:
+                votes["красный"] += 1.7
+        elif 15 <= h_deg < 42:
+            if s_norm < 0.52 and v_norm > 0.42:
+                votes["нюд"] += 1.6
+            elif s_norm >= 0.52 and v_norm > 0.58:
+                votes["золото/серебро"] += 1.4
+            elif v_norm < 0.42:
+                votes["бордо"] += 1.2
+            else:
+                votes["нюд"] += 1.2
+        elif 42 <= h_deg < 68:
+            votes["золото/серебро"] += 1.6
+        elif 68 <= h_deg < 165:
+            votes["зеленый"] += 1.7
+        elif 165 <= h_deg < 255:
+            votes["синий"] += 1.7
+        elif 255 <= h_deg < 315:
+            votes["фиолетовый"] += 1.7
+        elif 315 <= h_deg < 345:
+            votes["розовый"] += 1.7
+
+    return max(votes.items(), key=lambda x: x[1])[0]
+
 def validate_pillow_candidate(candidate: dict) -> dict | None:
     """
     Downloads image headers/bytes and verifies with Pillow:
@@ -522,6 +587,7 @@ def validate_pillow_candidate(candidate: dict) -> dict | None:
     2. Resolution >= 720 x 720
     3. Aspect Ratio: 0.45 <= (w / h) <= 1.15
     4. Valid Image format (JPEG, PNG, WEBP)
+    5. Automatic HSV dominant color tagging if no color tag present
     """
     url = candidate.get("imageUrl", "")
     if is_blacklisted(url):
@@ -549,6 +615,14 @@ def validate_pillow_candidate(candidate: dict) -> dict | None:
 
             candidate["width"] = w
             candidate["height"] = h
+
+            # Automatic HSV Color Detection if no color tag is present
+            tags = candidate.get("tags", [])
+            if not any(c in tags for c in ALL_COLOR_TAGS):
+                color = detect_hsv_color(img)
+                tags.append(color)
+                candidate["tags"] = tags
+
             return candidate
     except Exception:
         return None
