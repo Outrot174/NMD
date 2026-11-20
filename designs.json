@@ -2,19 +2,22 @@
   {
     "id": "nm_001",
     "imageUrl": "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1080&q=80",
-    "title": "Ультратонкий микрофренч на молочной базе",
+    "title": "Янтарный черепаховый арт • Квадрат",
     "tags": [
-      "френч"
+      "квадрат",
+      "минимализм",
+      "нюд"
     ],
     "sourceAuthor": "Елена Морозова (Москва)",
     "createdAt": "2026-02-10T10:00:00Z"
   },
   {
     "id": "nm_002",
-    "imageUrl": "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1080&q=80",
-    "title": "Глубокий винный глянец с золотой поталью",
+    "imageUrl": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1080&q=80",
+    "title": "Алый глянец • Миндаль • Праздничный",
     "tags": [
-      "блестки",
+      "бордо",
+      "миндаль",
       "праздничный"
     ],
     "sourceAuthor": "Camille Laurent (Paris)",
@@ -22,31 +25,37 @@
   },
   {
     "id": "nm_003",
-    "imageUrl": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1080&q=80",
-    "title": "Жемчужная хромированная втирка Glazed Donut",
+    "imageUrl": "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1080&q=80",
+    "title": "Лавандовый квадрат с серебряным шиммером",
     "tags": [
-      "нюд"
+      "блестки",
+      "квадрат",
+      "минимализм",
+      "праздничный"
     ],
     "sourceAuthor": "Анна Сидорова (СПб)",
     "createdAt": "2026-02-14T09:15:00Z"
   },
   {
     "id": "nm_004",
-    "imageUrl": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1080&q=80",
-    "title": "Хромированный серебряный металлик на длинный миндаль",
+    "imageUrl": "https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?auto=format&fit=crop&w=1080&q=80",
+    "title": "Абстрактный арт с золотой поталью • Миндаль",
     "tags": [
-      "миндаль"
+      "блестки",
+      "миндаль",
+      "праздничный"
     ],
     "sourceAuthor": "Soo-jin Park (Seoul)",
     "createdAt": "2026-02-15T16:40:00Z"
   },
   {
     "id": "nm_005",
-    "imageUrl": "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=1080&q=80",
-    "title": "Пудровый матовый нюд на мягкий квадрат",
+    "imageUrl": "https://images.unsplash.com/photo-1597999709389-e29dc41e218a?auto=format&fit=crop&w=1080&q=80",
+    "title": "Пудрово-сиреневый шиммер с жемчугом • Квадрат",
     "tags": [
+      "блестки",
       "квадрат",
-      "матовый",
+      "минимализм",
       "нюд"
     ],
     "sourceAuthor": "Мария Ковалева (Минск)",
@@ -54,56 +63,93 @@
   },
   {
     "id": "nm_006",
-    "imageUrl": "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1080&q=80",
-    "title": "Изумрудный глубокий кошачий глаз с золотым бликом",
+    "imageUrl": "https://images.unsplash.com/photo-1688583417757-9060cba25399?auto=format&fit=crop&w=1080&q=80",
+    "title": "Пастельный градиент омбре • Нюд • Миндаль",
     "tags": [
-      "кошачий глаз"
+      "миндаль",
+      "минимализм",
+      "нюд",
+      "омбре"
     ],
     "sourceAuthor": "Daria Vance (London)",
     "createdAt": "2026-02-17T13:00:00Z"
   },
   {
     "id": "nm_007",
-    "imageUrl": "https://images.unsplash.com/photo-1583001809873-a128495da465?auto=format&fit=crop&w=1080&q=80",
-    "title": "Геометрический минимализм с тонкими черными линиями",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/French_Manicure_with_Glitter_nail_art_on_ring_finger.jpg/960px-French_Manicure_with_Glitter_nail_art_on_ring_finger.jpg",
+    "title": "Классический френч с акцентным блеском • Квадрат",
     "tags": [
-      "минимализм"
+      "блестки",
+      "квадрат",
+      "нюд",
+      "френч"
     ],
     "sourceAuthor": "Ольга Васильева (Екатеринбург)",
     "createdAt": "2026-02-18T18:10:00Z"
   },
   {
     "id": "nm_008",
-    "imageUrl": "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1080&q=80",
-    "title": "Нежный лавандово-молочный градиент омбре",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Blue_cat_eye_nail_art.jpg/960px-Blue_cat_eye_nail_art.jpg",
+    "title": "Магнитный кошачий глаз • Мерцающие звезды",
     "tags": [
-      "нюд",
-      "омбре"
+      "блестки",
+      "квадрат",
+      "кошачий глаз",
+      "праздничный"
     ],
     "sourceAuthor": "Giulia Rossi (Milano)",
     "createdAt": "2026-02-19T08:45:00Z"
   },
   {
     "id": "nm_009",
-    "imageUrl": "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=1080&q=80",
-    "title": "Матовый графит с россыпью звездного шиммера",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Acrylic_nail_art_with_crystal.jpg/960px-Acrylic_nail_art_with_crystal.jpg",
+    "title": "Лавандовый глянец с кристаллом • Квадрат",
     "tags": [
       "блестки",
-      "матовый"
+      "квадрат",
+      "минимализм",
+      "нюд"
     ],
     "sourceAuthor": "Ксения Чернышова (Алматы)",
     "createdAt": "2026-02-19T19:30:00Z"
   },
   {
     "id": "nm_010",
-    "imageUrl": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1080&q=80",
-    "title": "Классический молочный френч с акцентом из кристаллов",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Matte_black_and_white_polkadot_nails_%2816476158115%29.jpg/960px-Matte_black_and_white_polkadot_nails_%2816476158115%29.jpg",
+    "title": "Матовый графит с контрастным горошком • Миндаль",
     "tags": [
-      "минимализм",
-      "нюд",
-      "френч"
+      "матовый",
+      "миндаль",
+      "минимализм"
     ],
     "sourceAuthor": "Chloe Dubois (Lyon)",
     "createdAt": "2026-02-20T12:00:00Z"
+  },
+  {
+    "id": "nm_011",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Nail_extensions_with_nail_art.jpg/960px-Nail_extensions_with_nail_art.jpg",
+    "title": "Французский бэби-бумер • Омбре • Стразы",
+    "tags": [
+      "блестки",
+      "квадрат",
+      "нюд",
+      "омбре",
+      "френч"
+    ],
+    "sourceAuthor": "Amina Al-Mansoor (Dubai)",
+    "createdAt": "2026-02-20T15:30:00Z"
+  },
+  {
+    "id": "nm_012",
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Gel_Nails_Pink_Orange_and_White_Design.jpg/960px-Gel_Nails_Pink_Orange_and_White_Design.jpg",
+    "title": "Персиковые волны с золотым блеском • Миндаль",
+    "tags": [
+      "блестки",
+      "миндаль",
+      "нюд",
+      "праздничный"
+    ],
+    "sourceAuthor": "Татьяна Белова (Новосибирск)",
+    "createdAt": "2026-02-20T18:00:00Z"
   }
 ]
